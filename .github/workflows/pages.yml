@@ -27,7 +27,7 @@ jobs:
           node-version: 22
       - name: Empacotar biblioteca do Supabase
         run: |
-          npm install --no-save @supabase/supabase-js@2 esbuild
+          npm install --no-audit --no-fund
           npm run vendor
       - uses: actions/configure-pages@v5
         with:

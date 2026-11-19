@@ -21,6 +21,7 @@ export function h(tag, props, ...kids) {
 
 // ---------- ícones (traço, 24x24) ----------
 const P = {
+  fingerprint: '<path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4"/><path d="M5 19.5C5.5 18 6 15 6 12c0-.7.12-1.37.34-2"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/><path d="M9 6.8a6 6 0 0 1 9 5.2c0 .47 0 1.17-.02 2"/>',
   assembly: '<circle cx="17.46" cy="18.51" r="1.7" fill="currentColor" stroke="none"/><circle cx="11.51" cy="20.49" r="1.7" fill="currentColor" stroke="none"/><circle cx="5.82" cy="17.83" r="1.7" fill="currentColor" stroke="none"/><circle cx="3.50" cy="12.00" r="1.7" fill="currentColor" stroke="none"/><circle cx="5.82" cy="6.17" r="1.7" fill="currentColor" stroke="none"/><circle cx="11.51" cy="3.51" r="1.7" fill="currentColor" stroke="none"/><circle cx="17.46" cy="5.49" r="1.7" fill="currentColor" stroke="none"/><circle cx="13.50" cy="16.13" r="1.4" fill="currentColor" stroke="none"/><circle cx="8.47" cy="14.63" r="1.4" fill="currentColor" stroke="none"/><circle cx="8.47" cy="9.37" r="1.4" fill="currentColor" stroke="none"/><circle cx="13.50" cy="7.87" r="1.4" fill="currentColor" stroke="none"/>',
   reply: '<path d="M9 17l-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>',
   arrowDown: '<path d="M12 5v14M19 12l-7 7-7-7"/>',

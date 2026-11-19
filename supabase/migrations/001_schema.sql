@@ -296,3 +296,9 @@ alter publication supabase_realtime add table public.message_reactions;
 -- ---------- v0.6: código exclusivo da presidência, aviso de nome repetido, remover membro ----------
 -- tabela group_secrets (admin_code, uso único, sem acesso pelo app); check_code e name_in_group aceitam os dois códigos
 -- remove_member(p_user) só para admin; a Edge Function "entrar" só dá presidência com o código exclusivo
+
+-- ---------- v0.7: convites de uso único ----------
+-- tabela invites (code, created_by, used_by, used_name, used_at); create_invite() e cancel_invite() só para admin
+-- group_secrets.admin_user: código da presidência é vitalício e vinculado a uma conta (só serve com usuário + senha)
+-- check_code agora devolve jsonb {kind: invite|used|admin_new|admin_bound, group, username}
+-- o invite_code antigo de groups foi desativado

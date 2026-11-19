@@ -2,6 +2,7 @@ import { h, icon, iconBtn, logo, errMsg, buzz } from '../ui.js';
 import { sb, usernameToEmail } from '../sb.js';
 import { savePassword, checkPassword, clearPassword } from '../lock.js';
 import { SUPABASE_URL, SUPABASE_KEY } from '../config.js';
+import { bioAvailable, bioVerify, bioEnabled } from '../bio.js';
 
 function field(label, input, hint) {
   return h('label', { class: 'field' }, h('span', { class: 'label' }, label), input, hint ? h('span', { class: 'small muted' }, hint) : null);
@@ -42,7 +43,9 @@ export function renderAuth(root, onDone) {
     let heading;
 
     if (mode === 'login') {
-      heading = [last?.name ? `De volta, ${last.name.split(' ')[0]}.` : 'De volta.', 'Entra com seu usuário e a senha que você já criou. Não precisa do código de novo.'];
+      heading = data.adminNote
+        ? ['Presidência.', 'Esse código está vinculado à conta da presidência. Ele só abre junto com o usuário e a senha dela.']
+        : [last?.name ? `De volta, ${last.name.split(' ')[0]}.` : 'De volta.', 'Entra com seu usuário e a senha que você já criou. Não precisa de convite de novo.'];
       const user = h('input', { class: 'input', autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', placeholder: 'seu usuário', value: data.loginUser || last?.username || '', required: true });
       const pass = passwordInput({ autocomplete: 'current-password', placeholder: 'sua senha', required: true });
       const btn = h('button', { class: 'btn primary block', type: 'submit' }, 'Entrar');
@@ -61,17 +64,25 @@ export function renderAuth(root, onDone) {
       heading = ['Conselho', 'O grupo dos amigos. As decisões também.'];
       const code = h('input', { class: 'input code', autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false', placeholder: 'CNS-······', value: data.code, required: true });
       const btn = h('button', { class: 'btn primary block', type: 'submit' }, 'Continuar');
-      form = h('form', null, steps(1), field('Código de acesso', code, 'Quem já é do grupo encontra o código na aba Membros.'), err, btn);
+      form = h('form', null, steps(1), field('Convite', code, 'Cada convite vale pra uma pessoa só. Peça o seu à presidência.'), err, btn);
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         err.textContent = '';
         busy(btn, true);
-        const { data: groupName, error } = await sb.rpc('check_code', { p_code: code.value.trim().toUpperCase() });
+        const { data: info, error } = await sb.rpc('check_code', { p_code: code.value.trim().toUpperCase() });
         busy(btn, false);
         if (error) { err.textContent = errMsg(error); return; }
-        if (!groupName) { err.textContent = 'Esse código não abre nada. Confere com o pessoal.'; buzz([30, 50, 30]); return; }
+        if (!info) { err.textContent = 'Esse código não existe. Confere com a presidência.'; buzz([30, 50, 30]); return; }
+        if (info.kind === 'used') { err.textContent = 'Esse convite já foi usado. Cada convite vale pra uma pessoa só: peça um novo à presidência.'; buzz([30, 50, 30]); return; }
+        if (info.kind === 'admin_bound') {
+          // código da presidência: só funciona junto com o usuário e a senha da conta vinculada
+          data.loginUser = info.username;
+          data.adminNote = true;
+          mode = 'login'; draw();
+          return;
+        }
         data.code = code.value.trim().toUpperCase();
-        data.group = groupName;
+        data.group = info.group;
         step = 2; draw();
       });
     } else if (step === 2) {
@@ -141,7 +152,7 @@ export function renderAuth(root, onDone) {
     }
 
     const switcher = mode === 'login'
-      ? h('p', { class: 'switch' }, 'Primeira vez aqui? ', h('button', { type: 'button', onClick: () => { mode = 'novo'; step = 1; draw(); } }, 'Tenho um código'))
+      ? h('p', { class: 'switch' }, 'Primeira vez aqui? ', h('button', { type: 'button', onClick: () => { mode = 'novo'; step = 1; data.adminNote = false; draw(); } }, 'Tenho um convite'))
       : step === 1 ? h('p', { class: 'switch' }, 'Já tem conta? ', h('button', { type: 'button', onClick: () => { mode = 'login'; draw(); } }, 'Entrar com usuário e senha')) : h('span');
     if (mode === 'login' && last?.username) switcher.prepend(h('span', { style: { display: 'block', marginBottom: '4px' } }, 'Não é você?'));
 
@@ -202,7 +213,19 @@ export function showLock({ userId, username, name, onUnlock, onLogout }) {
     } }, 'Trocar de conta'),
   );
   document.body.append(lockEl);
-  setTimeout(() => pass.input.focus(), 60);
+
+  // digital / rosto
+  (async () => {
+    if (!bioEnabled() || !(await bioAvailable())) { setTimeout(() => pass.input.focus(), 60); return; }
+    const tryBio = async () => {
+      try {
+        await bioVerify();
+        buzz(12); hideLock(); onUnlock?.();
+      } catch { pass.input.focus(); }
+    };
+    form.after(h('button', { type: 'button', class: 'btn line block', style: { marginTop: '10px' }, onClick: tryBio }, icon('fingerprint', 20), 'Usar digital'));
+    setTimeout(tryBio, 250);
+  })();
 }
 export function hideLock() { lockEl?.remove(); lockEl = null; }
 export const isLocked = () => !!lockEl;

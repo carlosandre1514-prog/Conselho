@@ -8,8 +8,7 @@ export default async function Membros(root) {
   const offs = [];
   const sub = h('span', { class: 'kicker' });
   const list = h('ul', { style: { margin: 0, padding: 0, listStyle: 'none' } });
-  const codeEl = h('span', { class: 'invite-code' }, 'CNS-······');
-  let code = '';
+  const invitesBox = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '0' } });
   const isAdmin = state.me.role === 'admin';
 
   function draw() {
@@ -49,18 +48,45 @@ export default async function Membros(root) {
       } }, icon('trash', 20), 'Remover do Conselho'));
   }
 
-  async function loadCode() {
-    const { data, error } = await sb.rpc('my_invite_code');
-    if (error) return;
-    code = data || '';
-    codeEl.textContent = code;
-  }
-
-  const shareCode = async () => {
-    const text = `Tá convidado pro Conselho. Baixa o app e entra com o código ${code}`;
-    if (navigator.share) { try { await navigator.share({ title: 'Conselho', text }); } catch { /* cancelado */ } }
+  const shareInvite = async (code) => {
+    const text = `Você foi convidado pro Conselho. Baixa o app e entra com este convite (vale só pra você, uma vez): ${code}`;
+    if (navigator.share) { try { await navigator.share({ title: 'Convite do Conselho', text }); } catch { /* cancelado */ } }
     else { await navigator.clipboard?.writeText(text); toast('Convite copiado'); }
   };
+
+  async function loadInvites() {
+    if (!isAdmin) return;
+    const { data, error } = await sb.from('invites').select('*').order('created_at', { ascending: false }).limit(50);
+    if (error) { invitesBox.replaceChildren(h('p', { class: 'small muted' }, errMsg(error))); return; }
+    const open = data.filter((i) => !i.used_at);
+    const used = data.filter((i) => i.used_at).slice(0, 5);
+    invitesBox.replaceChildren(
+      ...open.map((i) => h('div', { class: 'member' },
+        h('span', { class: 'grow' }, h('span', { class: 'invite-code', style: { fontSize: '24px' } }, i.code), h('span', { class: 'small muted', style: { display: 'block' } }, `criado ${timeAgo(i.created_at)} · ainda não usado`)),
+        iconBtn('copy', 'Copiar convite', async () => { await navigator.clipboard?.writeText(i.code); buzz(8); toast('Convite copiado'); }),
+        iconBtn('share', 'Mandar convite', () => shareInvite(i.code)),
+        iconBtn('x', 'Cancelar convite', async () => {
+          if (!(await confirmBox(`Cancelar o convite ${i.code}?`, 'Cancelar convite', true))) return;
+          const { error: e } = await sb.rpc('cancel_invite', { p_code: i.code });
+          if (e) return toast(errMsg(e));
+          loadInvites();
+        }))),
+      ...used.map((i) => h('div', { class: 'member', style: { opacity: 0.6 } },
+        h('span', { class: 'grow' }, h('span', { style: { textDecoration: 'line-through', fontFamily: 'var(--serif)', fontSize: '18px' } }, i.code),
+          h('span', { class: 'small muted', style: { display: 'block' } }, `usado por ${i.used_name || 'alguém'} · ${timeAgo(i.used_at)}`)))),
+      !open.length && !used.length ? h('p', { class: 'small muted', style: { margin: '6px 0' } }, 'Nenhum convite ainda.') : null,
+    );
+  }
+
+  async function newInvite(btn) {
+    btn.disabled = true;
+    const { data: code, error } = await sb.rpc('create_invite');
+    btn.disabled = false;
+    if (error) return toast(errMsg(error));
+    buzz(15);
+    await loadInvites();
+    shareInvite(code);
+  }
 
   offs.push(on('online', draw), on('members', draw));
 
@@ -68,22 +94,14 @@ export default async function Membros(root) {
     h('div', { class: 'masthead' }, h('div', null, sub, h('h1', { class: 'display' }, 'Membros')),
       h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Meu perfil', onClick: () => go('#perfil') }, avatar(state.me, 36))),
     h('div', { class: 'scroll' }, h('div', { class: 'pad' },
-      h('section', { class: 'panel brass invite' },
-        h('span', { class: 'kicker' }, 'Código de acesso'),
-        h('div', { class: 'row between' }, codeEl,
-          h('span', { class: 'row', style: { gap: '4px' } },
-            iconBtn('copy', 'Copiar código', async () => { await navigator.clipboard?.writeText(code); buzz(8); toast('Código copiado'); }),
-            iconBtn('share', 'Mandar convite', shareCode))),
-        h('p', { class: 'small', style: { margin: 0, color: '#BDB3A0', lineHeight: 1.5 } }, 'Quem tiver esse código entra no grupo. Manda só pra quem é do Conselho.'),
-        isAdmin ? h('button', { class: 'btn sm line', style: { alignSelf: 'flex-start' }, onClick: async () => {
-          if (!(await confirmBox('Trocar o código? O atual para de funcionar na hora (quem já entrou continua).', 'Trocar código'))) return;
-          const { data, error } = await sb.rpc('regenerate_code');
-          if (error) return toast(errMsg(error));
-          code = data; codeEl.textContent = data; buzz(15); toast('Código novo valendo');
-        } }, icon('refresh', 16), 'Trocar código') : null),
+      isAdmin ? h('section', { class: 'invite' },
+        h('div', { class: 'row between' }, h('span', { class: 'kicker' }, 'Convites'),
+          (() => { const b = h('button', { class: 'btn sm primary' }, icon('plus', 16, 2.4), 'Novo convite'); b.addEventListener('click', () => newInvite(b)); return b; })()),
+        h('p', { class: 'small muted', style: { margin: 0, lineHeight: 1.5 } }, 'Cada convite entra uma pessoa só. Depois de usado, não vale mais.'),
+        invitesBox) : h('p', { class: 'small muted', style: { margin: 0, lineHeight: 1.5 } }, 'Pra chamar alguém pro Conselho, peça um convite à presidência.'),
       h('div', { class: 'rule left' }, h('span', { class: 'kicker' }, 'Quem está no Conselho')),
       list)));
   draw();
-  await loadCode();
+  await loadInvites();
   return { destroy: () => offs.forEach((f) => f()) };
 }

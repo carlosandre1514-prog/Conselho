@@ -31,7 +31,7 @@ jobs:
         run: echo "ANDROID_HOME=$ANDROID_HOME" && ls "$ANDROID_HOME"
 
       - name: Instalar dependências
-        run: npm install --no-save @supabase/supabase-js@2 esbuild @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/assets@3
+        run: npm install --no-audit --no-fund
 
       - name: Empacotar biblioteca do Supabase
         run: npm run vendor

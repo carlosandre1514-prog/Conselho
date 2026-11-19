@@ -1,11 +1,12 @@
 import { sb, usernameToEmail } from '../sb.js';
 import { state, on, saveSettings, chatBgStyle, memberName } from '../state.js';
-import { h, icon, iconBtn, avatar, toast, sheet, pickFile, errMsg } from '../ui.js';
+import { h, icon, iconBtn, avatar, toast, sheet, pickFile, errMsg, switchToggle } from '../ui.js';
 import { uploadFile, compressImage } from '../media.js';
 import { savePassword } from '../lock.js';
 import { back } from '../nav.js';
 import { logout, lockNow, loadMembers } from '../app.js';
 import { APP_VERSION } from '../config.js';
+import { bioAvailable, bioVerify, bioEnabled, setBio } from '../bio.js';
 
 const BG_COLORS = ['#0A0603', '#1A0F05', '#141B24', '#1A1620'];
 const NAME_COLORS = ['#D9AE55', '#6FA8DC', '#5BBF86', '#E58BB8', '#E0675A', '#B39DDB', '#4DD0E1', '#FFB74D'];
@@ -115,6 +116,19 @@ export default async function Perfil(root) {
     });
   };
 
+  // linha da biometria (só aparece se o celular tiver)
+  const bioRow = h('div', { class: 'setting', style: { display: 'none' } },
+    h('span', { class: 'ib' }, icon('fingerprint', 18)),
+    h('span', { class: 'grow' }, h('div', { class: 'tt' }, 'Desbloquear com digital'), h('div', { class: 'st' }, 'Digital ou rosto no lugar da senha')),
+    switchToggle(bioEnabled(), async (on) => {
+      if (on) {
+        try { await bioVerify(); setBio(true); toast('Digital ativada'); }
+        catch { setBio(false); toast('Não confirmou a digital.'); drawBio(); }
+      } else { setBio(false); toast('Digital desativada'); }
+    }, 'Desbloquear com digital'));
+  const drawBio = () => { const t = bioRow.querySelector('.switch-t'); t?.setAttribute('aria-checked', String(bioEnabled())); };
+  bioAvailable().then((ok) => { if (ok) bioRow.style.display = ''; });
+
   const saveBtn = h('button', { class: 'btn primary block' }, 'Salvar perfil');
   saveBtn.addEventListener('click', async () => {
     if (!name.value.trim()) return toast('Escreva seu nome.');
@@ -151,6 +165,7 @@ export default async function Perfil(root) {
       h('div', { class: 'rule left' }, h('span', { class: 'kicker' }, 'Segurança')),
       h('div', { class: 'settings-list' },
         h('button', { class: 'setting', onClick: changePassword }, h('span', { class: 'ib' }, icon('key', 18)), h('span', { class: 'grow tt' }, 'Trocar senha'), icon('chevR', 16)),
+        bioRow,
         h('button', { class: 'setting', onClick: () => lockNow() }, h('span', { class: 'ib' }, icon('lock', 18)), h('span', { class: 'grow tt' }, 'Bloquear agora'), icon('chevR', 16)),
         h('button', { class: 'setting', onClick: () => logout() }, h('span', { class: 'ib', style: { color: 'var(--red)', background: 'rgba(224,103,90,.12)' } }, icon('logout', 18)), h('span', { class: 'grow tt', style: { color: 'var(--red)' } }, 'Sair da conta'))),
       h('p', { class: 'small muted', style: { textAlign: 'center', margin: '8px 0 0' } }, `Conselho v${APP_VERSION}`))));
