@@ -62,6 +62,7 @@ export function extOf(file, fallback = 'bin') {
 export const isVideoUrl = (u) => /\.(webm|mp4|mov|m4v)(\?|$)/i.test(u || '');
 
 // ---------- gravação de áudio ----------
+// Devolve controles da gravação + leitura do volume ao vivo (pra desenhar a ondinha).
 export async function startRecording() {
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
     throw new Error('Este aparelho não permite gravar áudio aqui.');
@@ -78,21 +79,64 @@ export async function startRecording() {
   const rec = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 48000 } : undefined);
   const chunks = [];
   rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+
+  // volume ao vivo
+  let ctx = null, analyser = null, buf = null;
+  try {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = ctx.createMediaStreamSource(stream);
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 512;
+    buf = new Uint8Array(analyser.fftSize);
+    src.connect(analyser);
+  } catch { /* sem ondinha, tudo bem */ }
+  const peaks = [];
+  const level = () => {
+    if (!analyser) return 0.3;
+    analyser.getByteTimeDomainData(buf);
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; sum += v * v; }
+    return Math.min(1, Math.sqrt(sum / buf.length) * 3.2);
+  };
+  const sampler = setInterval(() => peaks.push(level()), 70);
+
   rec.start(250);
   const t0 = Date.now();
-  const stopTracks = () => stream.getTracks().forEach((t) => t.stop());
+  const cleanup = () => {
+    clearInterval(sampler);
+    stream.getTracks().forEach((t) => t.stop());
+    try { ctx?.close(); } catch { /* ok */ }
+  };
   return {
     startedAt: t0,
+    level,
     stop: () => new Promise((resolve) => {
       rec.onstop = () => {
-        stopTracks();
+        cleanup();
         const type = rec.mimeType || mime || 'audio/webm';
-        resolve({ blob: new Blob(chunks, { type }), duration: (Date.now() - t0) / 1000, ext: type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm' });
+        resolve({
+          blob: new Blob(chunks, { type }),
+          duration: (Date.now() - t0) / 1000,
+          ext: type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm',
+          wave: downsample(peaks, 44),
+        });
       };
       rec.stop();
     }),
-    cancel: () => { rec.onstop = stopTracks; try { rec.stop(); } catch { stopTracks(); } },
+    cancel: () => { rec.onstop = cleanup; try { rec.stop(); } catch { cleanup(); } },
   };
+}
+
+function downsample(arr, n) {
+  if (!arr.length) return [];
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const a = Math.floor((i * arr.length) / n), b = Math.max(a + 1, Math.floor(((i + 1) * arr.length) / n));
+    let m = 0;
+    for (let j = a; j < b && j < arr.length; j++) m = Math.max(m, arr[j]);
+    out.push(Math.round(Math.max(0.08, m) * 100) / 100);
+  }
+  return out;
 }
 
 // Baixa ou compartilha um arquivo

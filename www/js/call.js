@@ -2,7 +2,7 @@
 // A "sala" é o próprio grupo: quem entra aparece pra todos, e o chat mostra que tem ligação rolando.
 import { sb } from './sb.js';
 import { state, emit, memberName } from './state.js';
-import { h, icon, avatar, toast, sheet } from './ui.js';
+import { h, icon, avatar, toast, sheet, buzz, fmtDur } from './ui.js';
 import { ICE_SERVERS } from './config.js';
 
 let ch = null;
@@ -18,6 +18,12 @@ const peers = new Map();      // id -> { pc, stream, pending, remoteSet }
 const earlyIce = new Map();   // id -> [candidates] que chegaram antes da oferta
 let ui = null, grid = null, subtitle = null, mini = null;
 const tiles = new Map();
+let wasActive = false;
+let incomingEl = null;
+let audioCtx = null;
+const meters = new Map(); // id -> { analyser, buf, src }
+let meterTimer = null;
+let clockTimer = null;
 
 export const callInfo = () => ({ active: participants.size > 0, count: participants.size, joined, mode, ids: [...participants.keys()] });
 
@@ -31,6 +37,8 @@ export function init() {
 
 export function destroy() {
   if (joined) leave();
+  hideIncoming();
+  stopMeters();
   if (ch) { sb.removeChannel(ch); ch = null; }
   participants = new Map();
   subscribed = false;
@@ -46,7 +54,60 @@ function onSync() {
     for (const id of [...peers.keys()]) if (!participants.has(id)) dropPeer(id);
     renderTiles();
   }
-  emit('call', callInfo());
+  const info = callInfo();
+  if (!wasActive && info.active && !joined && info.ids.some((id) => id !== state.me.id)) showIncoming();
+  if (!info.active || joined) hideIncoming();
+  wasActive = info.active;
+  emit('call', info);
+}
+
+function showIncoming() {
+  hideIncoming();
+  const ids = [...participants.keys()];
+  const who = ids.map((id) => memberName(id).split(' ')[0]).slice(0, 2).join(' e ');
+  const anyVideo = [...participants.values()].some((p) => p.mode === 'video');
+  buzz([200, 120, 200]);
+  incomingEl = h('div', { class: 'incoming', role: 'alert' },
+    h('span', { class: 'faces' }, ids.slice(0, 3).map((id) => avatar(state.members.get(id), 36))),
+    h('div', { class: 'grow' }, h('b', null, `${who} ${ids.length > 1 ? 'estão' : 'está'} na ligação`), h('span', null, anyVideo ? 'Chamada de vídeo do Conselho' : 'Chamada de voz do Conselho')),
+    h('button', { type: 'button', class: 'icon-btn filled round', 'aria-label': 'Agora não', onClick: hideIncoming }, icon('x', 18)),
+    h('button', { type: 'button', class: 'icon-btn round', style: { background: 'var(--grn)', color: '#082214' }, 'aria-label': 'Entrar na ligação', onClick: () => { hideIncoming(); openChoice(); } }, icon('phone', 18, 2.2)));
+  document.body.append(incomingEl);
+  setTimeout(hideIncoming, 25000);
+}
+function hideIncoming() { incomingEl?.remove(); incomingEl = null; }
+
+// ---------- quem está falando ----------
+function meter(id, stream) {
+  if (!stream || !stream.getAudioTracks().length) return;
+  const cur = meters.get(id);
+  if (cur && cur.stream === stream && cur.tracks === stream.getAudioTracks().length) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+    cur?.src.disconnect();
+    const src = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    src.connect(analyser);
+    meters.set(id, { analyser, buf: new Uint8Array(analyser.fftSize), src, stream, tracks: stream.getAudioTracks().length });
+  } catch { /* sem indicador */ }
+  if (!meterTimer) meterTimer = setInterval(readMeters, 180);
+}
+function readMeters() {
+  for (const [id, m] of meters) {
+    m.analyser.getByteTimeDomainData(m.buf);
+    let sum = 0;
+    for (let i = 0; i < m.buf.length; i++) { const v = (m.buf[i] - 128) / 128; sum += v * v; }
+    const level = Math.sqrt(sum / m.buf.length);
+    const muted = id === state.me.id ? !mic : participants.get(id)?.mic === false;
+    tiles.get(id)?.el.classList.toggle('speaking', level > 0.04 && !muted);
+  }
+}
+function stopMeters() {
+  clearInterval(meterTimer); meterTimer = null;
+  for (const m of meters.values()) { try { m.src.disconnect(); } catch { /* ok */ } }
+  meters.clear();
 }
 
 function send(to, data) {
@@ -132,6 +193,8 @@ function dropPeer(id, keepTile = false) {
   const peer = peers.get(id);
   if (peer) { try { peer.pc.close(); } catch { /* ok */ } peers.delete(id); }
   if (!keepTile) { tiles.get(id)?.el.remove(); tiles.delete(id); }
+  const m = meters.get(id);
+  if (m) { try { m.src.disconnect(); } catch { /* ok */ } meters.delete(id); }
 }
 
 async function publish() {
@@ -144,11 +207,13 @@ export function openChoice() {
   if (joined) { openUi(); return; }
   const info = callInfo();
   const close = sheet(
-    h('h3', null, info.active ? `Entrar na ligação (${info.count} ${info.count === 1 ? 'pessoa' : 'pessoas'})` : 'Começar ligação do grupo'),
-    h('p', { class: 'muted', style: { margin: 0, fontSize: '14px' } }, 'Todo mundo do Conselho pode entrar quando quiser.'),
+    h('h3', null, info.active ? 'Entrar na ligação' : 'Chamar o Conselho'),
+    h('p', { class: 'muted', style: { margin: '0 4px', fontSize: '14px', lineHeight: 1.5 } }, info.active
+      ? `${info.count} ${info.count === 1 ? 'pessoa já está' : 'pessoas já estão'} conversando. Entra do jeito que preferir.`
+      : 'Todo mundo recebe o aviso e entra quando quiser.'),
     h('div', { class: 'mode-choice' },
-      h('button', { type: 'button', onClick: () => { close(); join('voice'); } }, h('span', { class: 'ic' }, icon('phone', 24)), 'Só voz'),
-      h('button', { type: 'button', onClick: () => { close(); join('video'); } }, h('span', { class: 'ic' }, icon('video', 24)), 'Com vídeo')),
+      h('button', { type: 'button', onClick: () => { close(); join('voice'); } }, h('span', { class: 'ic' }, icon('phone', 22, 2)), h('span', null, 'Só voz', h('small', null, 'Gasta menos internet'))),
+      h('button', { type: 'button', onClick: () => { close(); join('video'); } }, h('span', { class: 'ic' }, icon('video', 22, 2)), h('span', null, 'Com vídeo', h('small', null, 'Câmera ligada')))),
   );
 }
 
@@ -173,6 +238,7 @@ export async function join(m) {
   joined = true;
   mic = true;
   cam = m === 'video';
+  buzz(25);
   await publish();
   if (wasEmpty) {
     sb.from('messages').insert({ kind: 'call', body: m === 'video' ? 'Chamada de vídeo' : 'Chamada de voz', meta: { mode: m } }).then(() => {});
@@ -188,6 +254,9 @@ export async function leave() {
   earlyIce.clear();
   local?.getTracks().forEach((t) => t.stop());
   local = null;
+  stopMeters();
+  clearInterval(clockTimer);
+  buzz(15);
   try { await ch?.untrack(); } catch { /* ok */ }
   ui?.remove(); ui = null; grid = null;
   mini?.remove(); mini = null;
@@ -253,12 +322,13 @@ function openUi() {
   controls.push(h('button', { type: 'button', class: 'hang', 'aria-label': 'Sair da ligação', onClick: leave }, icon('phoneOff', 24)));
   ui = h('div', { class: 'call', role: 'dialog', 'aria-label': 'Ligação do grupo' },
     h('div', { class: 'call-top' },
-      h('div', { class: 'logo-badge' }, icon('landmark', 22, 1.6)),
       h('div', { class: 'grow' }, h('b', null, 'Ligação do Conselho'), subtitle),
       h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Minimizar ligação', onClick: minimize }, icon('minimize', 20))),
     grid,
     h('div', { class: 'call-controls' }, controls));
   document.body.append(ui);
+  clearInterval(clockTimer);
+  clockTimer = setInterval(renderTiles, 1000);
   renderTiles();
 }
 
@@ -274,7 +344,9 @@ function renderTiles() {
   if (mini) mini.lastChild.textContent = `Na ligação · ${participants.size} · voltar`;
   if (!grid) return;
   const ids = [state.me.id, ...[...participants.keys()].filter((id) => id !== state.me.id)];
-  subtitle.textContent = `${ids.length} na ligação · ${mode === 'video' ? 'vídeo' : 'voz'}`;
+  const starts = [...participants.values()].map((p) => p.at).filter(Boolean);
+  const since = starts.length ? Math.min(...starts) : Date.now();
+  subtitle.replaceChildren(h('span', { class: 'timer' }, fmtDur((Date.now() - since) / 1000)), ` · ${ids.length} ${ids.length === 1 ? 'pessoa' : 'pessoas'} · ${mode === 'video' ? 'vídeo' : 'voz'}`);
   grid.classList.toggle('one', ids.length <= 2);
   for (const id of [...tiles.keys()]) if (!ids.includes(id)) { tiles.get(id).el.remove(); tiles.delete(id); }
   for (const id of ids) {
@@ -296,6 +368,7 @@ function renderTiles() {
       t.video.srcObject = stream;
       t.video.play().catch(() => {});
     }
+    if (stream) meter(id, stream);
     const info = isMe ? { cam, mic } : participants.get(id) || {};
     const liveVideo = stream?.getVideoTracks().some((v) => v.readyState === 'live' && !v.muted);
     const showVideo = !!info.cam && (isMe ? !!local?.getVideoTracks()[0] : liveVideo);

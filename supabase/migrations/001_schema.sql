@@ -270,3 +270,20 @@ create policy "dono apaga midia" on storage.objects for delete to authenticated
 
 -- ---------- grupo inicial ----------
 insert into public.groups (name, invite_code) values ('Conselho', 'CNS-XXXXXX'); -- o código real foi gerado aleatoriamente
+
+-- ---------- v0.2: reações e fotos de quem votou ----------
+create table public.message_reactions (
+  message_id bigint not null references public.messages(id) on delete cascade,
+  user_id uuid not null default auth.uid() references public.profiles(id) on delete cascade,
+  emoji text not null check (char_length(emoji) between 1 and 16),
+  created_at timestamptz not null default now(),
+  primary key (message_id, user_id)
+);
+alter table public.message_reactions replica identity full;
+alter table public.message_reactions enable row level security;
+create policy "ver reacoes" on public.message_reactions for select to authenticated using (exists (select 1 from public.messages m where m.id = message_id and m.group_id = public.my_group()));
+create policy "reagir" on public.message_reactions for insert to authenticated with check (user_id = auth.uid() and exists (select 1 from public.messages m where m.id = message_id and m.group_id = public.my_group()));
+create policy "trocar reacao" on public.message_reactions for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "tirar reacao" on public.message_reactions for delete to authenticated using (user_id = auth.uid());
+alter publication supabase_realtime add table public.message_reactions;
+-- poll_results passou a devolver também voter_ids (uuid[])

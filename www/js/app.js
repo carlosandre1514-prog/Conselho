@@ -1,6 +1,6 @@
 import { sb } from './sb.js';
 import { state, emit, applySettings } from './state.js';
-import { h, icon, toast, errMsg } from './ui.js';
+import { h, icon, logo, toast, errMsg } from './ui.js';
 import { LOCK_AFTER_MS } from './config.js';
 import { renderAuth, showLock, isLocked } from './screens/auth.js';
 import { clearPassword } from './lock.js';
@@ -32,9 +32,9 @@ const routes = {
 };
 
 const TABS = [
-  ['chat', 'Chat', 'chat'],
-  ['conselho', 'Conselho', 'landmark'],
-  ['figurinhas', 'Figurinhas', 'smile'],
+  ['chat', 'Conversa', 'chat'],
+  ['conselho', 'Conselho', 'assembly'],
+  ['figurinhas', 'Figurinhas', 'sticker'],
   ['membros', 'Membros', 'users'],
 ];
 
@@ -51,8 +51,34 @@ let main, tabbar;
 function buildShell() {
   main = h('div', { class: 'screen' });
   tabbar = h('nav', { class: 'tabbar', 'aria-label': 'Menu principal' },
-    TABS.map(([id, label, ic]) => h('a', { href: `#${id}`, 'data-tab': id }, h('span', { class: 'ic' }, icon(ic, 22)), label)));
+    TABS.map(([id, label, ic]) => h('a', { href: `#${id}`, 'data-tab': id }, icon(ic, 23, 1.7), label)));
   root.replaceChildren(main, tabbar);
+  updateBadge();
+}
+
+// ---------- mensagens não lidas (bolinha na aba Conversa) ----------
+const READ_KEY = 'conselho-last-read';
+export const getLastRead = () => Number(localStorage.getItem(READ_KEY) || 0);
+export function markRead(id) { if (id > getLastRead()) localStorage.setItem(READ_KEY, String(id)); state.unread = 0; updateBadge(); }
+function updateBadge() {
+  const a = tabbar?.querySelector('a[data-tab="chat"]');
+  if (!a) return;
+  a.querySelector('.badge')?.remove();
+  if (state.unread > 0) a.append(h('span', { class: 'badge' }, state.unread > 99 ? '99+' : String(state.unread)));
+}
+let inboxCh = null;
+async function startInbox() {
+  const { count } = await sb.from('messages').select('id', { count: 'exact', head: true }).gt('id', getLastRead()).neq('user_id', state.me.id);
+  state.unread = count || 0;
+  updateBadge();
+  inboxCh = sb.channel('inbox')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `group_id=eq.${state.group.id}` }, (p) => {
+      if (p.new.user_id === state.me.id) return;
+      if (parseRoute().name === 'chat' && !document.hidden) return;
+      state.unread++;
+      updateBadge();
+    })
+    .subscribe();
 }
 
 async function render() {
@@ -70,7 +96,7 @@ async function render() {
     current = await route.view(main, r);
   } catch (e) {
     console.error(e);
-    main.replaceChildren(h('div', { class: 'empty' }, 'Algo deu errado: ', errMsg(e), h('br'), h('br'),
+    main.replaceChildren(h('div', { class: 'empty' }, h('span', { class: 'display' }, 'Deu ruim aqui.'), errMsg(e),
       h('button', { class: 'btn ghost', onClick: () => render() }, 'Tentar de novo')));
   }
 }
@@ -103,7 +129,7 @@ function startPresence() {
 }
 
 async function startApp() {
-  root.replaceChildren(h('div', { class: 'boot' }, h('div', { class: 'spinner' }), h('p', null, 'Abrindo o Conselho…')));
+  root.replaceChildren(h('div', { class: 'boot' }, logo(64)));
   const { data: { session } } = await sb.auth.getSession();
   state.session = session;
   const { data: me, error } = await sb.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
@@ -121,6 +147,7 @@ async function startApp() {
   startPresence();
   call.init();
   buildShell();
+  startInbox().catch(() => {});
   state.ready = true;
   if (!location.hash) location.replace('#chat');
   render();
@@ -129,7 +156,11 @@ async function startApp() {
 export async function logout() {
   state.ready = false;
   call.leave();
-  try { if (presenceCh) await sb.removeChannel(presenceCh); if (profilesCh) await sb.removeChannel(profilesCh); } catch { /* ignore */ }
+  try {
+    if (presenceCh) await sb.removeChannel(presenceCh);
+    if (profilesCh) await sb.removeChannel(profilesCh);
+    if (inboxCh) await sb.removeChannel(inboxCh);
+  } catch { /* ignore */ }
   clearPassword();
   await sb.auth.signOut().catch(() => {});
   state.me = null; state.session = null; state.members = new Map();
@@ -142,6 +173,7 @@ function lockNow() {
   showLock({
     userId: state.session.user.id,
     username: state.me?.username || state.session.user.email?.split('@')[0],
+    name: state.me?.name,
     onLogout: logout,
   });
 }
@@ -166,6 +198,7 @@ async function boot() {
     showLock({
       userId: session.user.id,
       username: session.user.user_metadata?.username || session.user.email?.split('@')[0],
+      name: session.user.user_metadata?.name,
       onUnlock: () => startApp().catch(fatal),
       onLogout: logout,
     });
@@ -174,8 +207,8 @@ async function boot() {
 
 function fatal(e) {
   console.error(e);
-  root.replaceChildren(h('div', { class: 'boot' },
-    h('p', { style: { textAlign: 'center', padding: '0 24px' } }, 'Não deu pra abrir: ', errMsg(e)),
+  root.replaceChildren(h('div', { class: 'boot' }, logo(48),
+    h('p', { style: { textAlign: 'center', padding: '0 24px', lineHeight: 1.5 } }, 'O Conselho não abriu.', h('br'), errMsg(e)),
     h('button', { class: 'btn primary', onClick: () => location.reload() }, 'Tentar de novo')));
 }
 

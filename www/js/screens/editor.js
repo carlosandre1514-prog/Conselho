@@ -20,7 +20,7 @@ export default async function Editor(root) {
   if (!file) {
     root.replaceChildren(
       h('header', { class: 'topbar' }, iconBtn('x', 'Fechar', () => back('#figurinhas')), h('h1', { class: 'grow' }, 'Nova figurinha')),
-      h('div', { class: 'pad' }, h('div', { class: 'empty' }, 'Escolha de onde vem a figurinha.'),
+      h('div', { class: 'pad' }, h('div', { class: 'empty' }, h('span', { class: 'display' }, 'De onde vem?'), 'Escolhe a foto ou o vídeo que vai virar figurinha.'),
         h('button', { class: 'btn primary block', onClick: () => pickAgain('image/*') }, icon('image', 18), 'Foto da galeria'),
         h('button', { class: 'btn ghost block', onClick: () => pickAgain('video/*,image/gif') }, icon('film', 18), 'Vídeo ou GIF')));
     return { destroy: () => current?.destroy?.() };
@@ -205,7 +205,7 @@ export default async function Editor(root) {
   canvas.addEventListener('pointercancel', end);
 
   // ---------- painéis de ferramentas ----------
-  const panel = h('div', { class: 'card tool-panel' });
+  const panel = h('div', { class: 'panel tool-panel' });
   const toolsBar = h('div', { class: 'tools', role: 'toolbar', 'aria-label': 'Ferramentas' });
   const TOOLS = [
     ['cut', 'Recortar', 'scissors'],
@@ -350,7 +350,7 @@ export default async function Editor(root) {
     });
   }
 
-  const exportBtn = h('button', { class: 'btn ghost', style: { flex: 1 } }, icon('download', 18), isVideo ? 'Exportar' : 'Exportar .webp');
+  const exportBtn = h('button', { class: 'btn line', style: { flex: 1 } }, icon('download', 18), isVideo ? 'Exportar' : 'Exportar .webp');
   exportBtn.addEventListener('click', async () => {
     exportBtn.disabled = true;
     try {

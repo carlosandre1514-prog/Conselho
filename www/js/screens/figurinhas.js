@@ -9,7 +9,7 @@ const stickerMedia = (url) => isVideoUrl(url)
   : h('img', { src: url, alt: '', loading: 'lazy' });
 
 export default async function Figurinhas(root) {
-  const packs = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '18px' } }, h('div', { class: 'spinner' }));
+  const packs = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } }, h('div', { class: 'sticker-grid' }, Array.from({ length: 8 }, () => h('div', { class: 'sk', style: { aspectRatio: '1', borderRadius: '16px' } }))));
   let stickers = [];
 
   async function choose(kind) {
@@ -53,7 +53,7 @@ export default async function Figurinhas(root) {
 
   function draw() {
     if (!stickers.length) {
-      packs.replaceChildren(h('div', { class: 'empty' }, 'O grupo ainda não tem figurinhas.', h('br'), 'Crie a primeira ali em cima!'));
+      packs.replaceChildren(h('div', { class: 'empty' }, h('span', { class: 'display' }, 'Acervo vazio.'), 'Ainda não tem nenhuma figurinha do grupo. A primeira vai virar clássico.'));
       return;
     }
     const byPack = new Map();
@@ -62,12 +62,12 @@ export default async function Figurinhas(root) {
     const sections = [];
     for (const [name, list] of byPack) {
       sections.push(h('div', { class: 'row between' },
-        h('div', null, h('h2', { style: { margin: 0, fontSize: '16px', fontWeight: 800 } }, name), h('span', { class: 'small muted' }, `${list.length} ${list.length === 1 ? 'figurinha' : 'figurinhas'}`)),
-        h('button', { class: 'btn sm ghost', onClick: () => exportPack(list) }, h('span', { style: { color: 'var(--gold)' } }, icon('download', 16, 2)), 'Exportar')));
+        h('div', null, h('h2', { class: 'display', style: { margin: 0, fontSize: '22px' } }, name), h('span', { class: 'small muted num' }, `${list.length} ${list.length === 1 ? 'figurinha' : 'figurinhas'}`)),
+        h('button', { class: 'btn sm line', onClick: () => exportPack(list) }, h('span', { style: { color: 'var(--gold)' } }, icon('download', 16, 2)), 'Exportar')));
       sections.push(grid(list));
     }
     if (mineRecent.length) {
-      sections.push(h('div', null, h('h2', { style: { margin: 0, fontSize: '16px', fontWeight: 800 } }, 'Feitas por você'), h('span', { class: 'small muted' }, 'As últimas que você criou')));
+      sections.push(h('div', null, h('h2', { class: 'display', style: { margin: 0, fontSize: '22px' } }, 'Suas'), h('span', { class: 'small muted' }, 'As últimas que você fez')));
       sections.push(grid(mineRecent));
     }
     packs.replaceChildren(...sections);
@@ -88,12 +88,12 @@ export default async function Figurinhas(root) {
     .subscribe();
 
   root.replaceChildren(
-    h('div', { class: 'big-title' }, h('div', null, h('h1', null, 'Figurinhas'), h('p', null, 'Feitas pelo grupo')),
-      iconBtn('plus', 'Criar figurinha', () => choose('image'), 'gold')),
+    h('div', { class: 'masthead' }, h('div', null, h('span', { class: 'kicker' }, 'Acervo do grupo'), h('h1', { class: 'display' }, 'Figurinhas')),
+      iconBtn('plus', 'Criar figurinha', () => choose('image'), 'gold round')),
     h('div', { class: 'scroll' }, h('div', { class: 'pad' },
-      h('section', { class: 'card gold create-card' },
-        h('h2', null, 'Criar figurinha'),
-        h('p', { class: 'small', style: { margin: 0, color: '#B5AD9E', lineHeight: 1.5 } }, 'De uma foto, GIF ou vídeo curto. Recorte, escreva, desenhe e pronto.'),
+      h('section', { class: 'panel brass make-card' },
+        h('h2', { class: 'display' }, 'Faz uma nova'),
+        h('p', { class: 'small', style: { margin: 0, color: '#BDB3A0', lineHeight: 1.5 } }, 'Aquela foto que todo mundo zoa, um vídeo de 3 segundos, um GIF. Recorta, escreve e manda.'),
         h('div', { class: 'sources' },
           h('button', { type: 'button', onClick: () => choose('image') }, h('span', { style: { color: 'var(--gold)' } }, icon('image', 22)), 'Galeria'),
           h('button', { type: 'button', onClick: () => choose('camera') }, h('span', { style: { color: 'var(--gold)' } }, icon('camera', 22)), 'Câmera'),

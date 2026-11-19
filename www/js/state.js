@@ -7,7 +7,8 @@ export const state = {
   online: new Set(), // ids online
   ready: false,
   suppressLock: false,
-  pendingSticker: null, // arquivo escolhido para o editor de figurinha
+  pendingSticker: null,
+  unread: 0, // arquivo escolhido para o editor de figurinha
   settings: loadSettings(),
 };
 
@@ -21,7 +22,7 @@ export const on = (name, fn) => {
 
 const SETTINGS_KEY = 'conselho-settings';
 function loadSettings() {
-  const def = { bgType: 'color', bgColor: '#0E0D0B', bgImage: null, bubbleAlpha: 1, bgDim: 0.25 };
+  const def = { bgType: 'color', bgColor: '#11100D', bgImage: null, bubbleAlpha: 1, bgDim: 0.25 };
   try { return { ...def, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') }; } catch { return def; }
 }
 export function saveSettings(patch) {
@@ -48,7 +49,7 @@ export function chatBgStyle(el) {
     el.style.backgroundColor = '#000';
   } else {
     el.style.backgroundImage = '';
-    el.style.backgroundColor = s.bgColor || '#0E0D0B';
+    el.style.backgroundColor = s.bgColor || '#11100D';
   }
 }
 

@@ -21,6 +21,14 @@ export function h(tag, props, ...kids) {
 
 // ---------- ícones (traço, 24x24) ----------
 const P = {
+  assembly: '<circle cx="17.46" cy="18.51" r="1.7" fill="currentColor" stroke="none"/><circle cx="11.51" cy="20.49" r="1.7" fill="currentColor" stroke="none"/><circle cx="5.82" cy="17.83" r="1.7" fill="currentColor" stroke="none"/><circle cx="3.50" cy="12.00" r="1.7" fill="currentColor" stroke="none"/><circle cx="5.82" cy="6.17" r="1.7" fill="currentColor" stroke="none"/><circle cx="11.51" cy="3.51" r="1.7" fill="currentColor" stroke="none"/><circle cx="17.46" cy="5.49" r="1.7" fill="currentColor" stroke="none"/><circle cx="13.50" cy="16.13" r="1.4" fill="currentColor" stroke="none"/><circle cx="8.47" cy="14.63" r="1.4" fill="currentColor" stroke="none"/><circle cx="8.47" cy="9.37" r="1.4" fill="currentColor" stroke="none"/><circle cx="13.50" cy="7.87" r="1.4" fill="currentColor" stroke="none"/>',
+  reply: '<path d="M9 17l-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>',
+  arrowDown: '<path d="M12 5v14M19 12l-7 7-7-7"/>',
+  eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff: '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24M1 1l22 22"/>',
+  sticker: '<path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z"/><path d="M15 3v6h6"/><path d="M8 13s1.5 2 4 2 4-2 4-2"/>',
+  keyboard: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
+  feather: '<path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><path d="M16 8L2 22M17.5 15H9"/>',
   chat: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
   landmark: '<path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2l9 5H3z"/>',
   smile: '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>',
@@ -76,6 +84,26 @@ export function icon(name, size = 22, sw = 1.8) {
 }
 export const iconBtn = (name, label, onClick, cls = '') =>
   h('button', { type: 'button', class: `icon-btn ${cls}`, 'aria-label': label, title: label, onClick }, icon(name, 20));
+
+// ---------- marca do Conselho (assembleia em "C") ----------
+const LOGO = '<g fill="currentColor"><rect x="1344" y="1418" width="132" height="132" rx="40" transform="rotate(50.0 1410 1484)"/><rect x="1103" y="1540" width="132" height="132" rx="40" transform="rotate(76.0 1169 1606)"/><rect x="833" y="1545" width="132" height="132" rx="40" transform="rotate(102.0 899 1611)"/><rect x="589" y="1431" width="132" height="132" rx="40" transform="rotate(128.0 655 1497)"/><rect x="419" y="1221" width="132" height="132" rx="40" transform="rotate(154.0 485 1287)"/><rect x="358" y="958" width="132" height="132" rx="40" transform="rotate(180.0 424 1024)"/><rect x="419" y="695" width="132" height="132" rx="40" transform="rotate(206.0 485 761)"/><rect x="589" y="485" width="132" height="132" rx="40" transform="rotate(232.0 655 551)"/><rect x="833" y="371" width="132" height="132" rx="40" transform="rotate(258.0 899 437)"/><rect x="1103" y="376" width="132" height="132" rx="40" transform="rotate(284.0 1169 442)"/><rect x="1344" y="498" width="132" height="132" rx="40" transform="rotate(310.0 1410 564)"/><rect x="1213" y="1261" width="116" height="116" rx="35" transform="rotate(50.0 1271 1319)"/><rect x="944" y="1350" width="116" height="116" rx="35" transform="rotate(93.3 1002 1408)"/><rect x="686" y="1230" width="116" height="116" rx="35" transform="rotate(136.7 744 1288)"/><rect x="581" y="966" width="116" height="116" rx="35" transform="rotate(180.0 639 1024)"/><rect x="686" y="702" width="116" height="116" rx="35" transform="rotate(223.3 744 760)"/><rect x="944" y="582" width="116" height="116" rx="35" transform="rotate(266.7 1002 640)"/><rect x="1213" y="671" width="116" height="116" rx="35" transform="rotate(310.0 1271 729)"/></g><circle cx="1239" cy="1024" r="118" fill="#F3ECDE"/>';
+export function logo(size = 44) {
+  const s = h('span', { class: 'mark', 'aria-hidden': 'true' });
+  s.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 2048 2048">${LOGO}</svg>`;
+  return s;
+}
+
+// vibração curtinha (Android); no iPhone simplesmente não faz nada
+export function buzz(p = 12) { try { navigator.vibrate?.(p); } catch { /* ok */ } }
+
+// blocos de "carregando"
+export function skeleton(lines = 4) {
+  return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '14px', padding: '6px 0' }, 'aria-hidden': 'true' },
+    Array.from({ length: lines }, (_, i) => h('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+      h('div', { class: 'sk', style: { height: '12px', width: '28%' } }),
+      h('div', { class: 'sk', style: { height: '18px', width: `${70 + ((i * 17) % 25)}%` } }),
+      h('div', { class: 'sk', style: { height: '12px', width: '45%' } }))));
+}
 
 // ---------- avatar ----------
 export function avatar(profile, size = 36) {

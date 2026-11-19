@@ -11,4 +11,4 @@ export const ICE_SERVERS = [
 // Depois de quantos segundos fora do app ele pede a senha de novo.
 export const LOCK_AFTER_MS = 10_000;
 
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = '0.2.0';

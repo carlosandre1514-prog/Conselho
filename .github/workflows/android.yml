@@ -40,7 +40,7 @@ jobs:
         run: npx cap add android
 
       - name: Ícone e tela de abertura
-        run: npx capacitor-assets generate --android --assetPath assets --iconBackgroundColor '#0E0D0B' --iconBackgroundColorDark '#0E0D0B' --splashBackgroundColor '#0E0D0B' --splashBackgroundColorDark '#0E0D0B'
+        run: npx capacitor-assets generate --android --assetPath assets --iconBackgroundColor '#11100D' --iconBackgroundColorDark '#11100D' --splashBackgroundColor '#11100D' --splashBackgroundColorDark '#11100D'
 
       - name: Permissões de microfone e câmera
         run: |
