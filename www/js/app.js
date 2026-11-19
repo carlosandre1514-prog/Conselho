@@ -102,6 +102,13 @@ async function render() {
 }
 window.addEventListener('hashchange', render);
 
+// teclado aberto (campo de texto em foco) → esconde o menu de baixo
+const isTypingField = (el) => el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && !['checkbox', 'radio', 'range', 'file', 'button'].includes(el.type)));
+document.addEventListener('focusin', (e) => { if (isTypingField(e.target) && root.contains(e.target)) root.classList.add('kb-open'); });
+document.addEventListener('focusout', () => {
+  setTimeout(() => { if (!isTypingField(document.activeElement)) root.classList.remove('kb-open'); }, 80);
+});
+
 // ---------- dados do grupo ----------
 export async function loadMembers() {
   const { data, error } = await sb.from('profiles').select('*').order('name');
