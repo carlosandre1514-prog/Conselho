@@ -1,6 +1,6 @@
 import { sb } from '../sb.js';
 import { state, on } from '../state.js';
-import { h, icon, iconBtn, avatar, timeAgo, toast, sheet, confirmBox, errMsg, buzz } from '../ui.js';
+import { h, icon, iconBtn, avatar, logo, viewer, timeAgo, toast, sheet, confirmBox, errMsg, buzz } from '../ui.js';
 import { loadMembers } from '../app.js';
 import { go } from '../nav.js';
 
@@ -94,6 +94,9 @@ export default async function Membros(root) {
     h('div', { class: 'masthead' }, h('div', null, sub, h('h1', { class: 'display' }, 'Membros')),
       h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Meu perfil', onClick: () => go('#perfil') }, avatar(state.me, 36))),
     h('div', { class: 'scroll' }, h('div', { class: 'pad' },
+      h('button', { type: 'button', class: 'group-card', onClick: () => viewer('img/conselho.jpg') },
+        logo(64),
+        h('div', null, h('b', { class: 'display' }, state.group?.name || 'Conselho'), h('span', { class: 'small muted' }, `${state.members.size} ${state.members.size === 1 ? 'membro' : 'membros'}`))),
       isAdmin ? h('section', { class: 'invite' },
         h('div', { class: 'row between' }, h('span', { class: 'kicker' }, 'Convites'),
           (() => { const b = h('button', { class: 'btn sm primary' }, icon('plus', 16, 2.4), 'Novo convite'); b.addEventListener('click', () => newInvite(b)); return b; })()),

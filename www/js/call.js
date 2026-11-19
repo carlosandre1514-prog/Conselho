@@ -2,7 +2,7 @@
 // A "sala" é o próprio grupo: quem entra aparece pra todos, e o chat mostra que tem ligação rolando.
 import { sb } from './sb.js';
 import { state, emit, memberName } from './state.js';
-import { h, icon, avatar, toast, sheet, buzz, fmtDur } from './ui.js';
+import { h, icon, avatar, logo, toast, sheet, buzz, fmtDur } from './ui.js';
 import { ICE_SERVERS } from './config.js';
 import { startRing, stopRing, unlockAudio } from './ring.js';
 
@@ -73,7 +73,7 @@ function showIncoming() {
   const anyVideo = [...participants.values()].some((p) => p.mode === 'video');
   buzz([200, 120, 200]);
   incomingEl = h('div', { class: 'incoming', role: 'alert' },
-    h('span', { class: 'faces' }, ids.slice(0, 3).map((id) => avatar(state.members.get(id), 36))),
+    logo(42),
     h('div', { class: 'grow' }, h('b', null, `${who} ${ids.length > 1 ? 'estão' : 'está'} na ligação`), h('span', null, anyVideo ? 'Chamada de vídeo do Conselho' : 'Chamada de voz do Conselho')),
     h('button', { type: 'button', class: 'icon-btn filled round', 'aria-label': 'Agora não', onClick: hideIncoming }, icon('x', 18)),
     h('button', { type: 'button', class: 'icon-btn round', style: { background: 'var(--grn)', color: '#082214' }, 'aria-label': 'Entrar na ligação', onClick: () => { hideIncoming(); openChoice(); } }, icon('phone', 18, 2.2)));
