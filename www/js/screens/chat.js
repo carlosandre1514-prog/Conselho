@@ -72,7 +72,7 @@ export default async function Chat(root) {
     strip.replaceChildren(h('div', { class: 'call-strip' },
       h('span', { class: 'live-dot' }), faces,
       h('span', { class: 'grow' }, c.joined ? 'Você está na ligação' : `${c.count} na ligação`),
-      h('button', { class: 'btn sm primary', style: { background: 'var(--grn)', color: '#082214' }, onClick: () => call.openChoice() }, c.joined ? 'Voltar' : 'Entrar')));
+      h('button', { class: 'btn sm', style: { background: 'var(--grn)', color: '#082214' }, onClick: () => call.openChoice() }, c.joined ? 'Voltar' : 'Entrar')));
   };
   updateStrip();
   offs.push(on('call', updateStrip));
@@ -181,13 +181,13 @@ export default async function Chat(root) {
       }
       case 'pauta':
         bubble = h('div', { class: 'bubble card-b' },
-          h('span', { class: 'head kicker', style: { color: 'var(--gold)' } }, icon('assembly', 14), `Nova pauta · ${firstName(m.user_id)}`),
+          h('span', { class: 'head small', style: { color: 'var(--gold)', fontWeight: 600 } }, icon('assembly', 15), `Nova pauta · ${firstName(m.user_id)}`),
           h('span', { class: 'title' }, m.body),
           h('a', { class: 'btn sm primary', href: `#pauta/${m.meta?.pauta_id}` }, 'Abrir a pauta'), meta);
         break;
       case 'poll':
         bubble = h('div', { class: 'bubble card-b' },
-          h('span', { class: 'head kicker', style: { color: 'var(--gold)' } }, icon('vote', 14, 2), `Votação aberta · ${firstName(m.user_id)}`),
+          h('span', { class: 'head small', style: { color: 'var(--gold)', fontWeight: 600 } }, icon('vote', 15, 2), `Votação aberta · ${firstName(m.user_id)}`),
           h('span', { class: 'title' }, m.body),
           h('a', { class: 'btn sm primary', href: `#votacao/${m.meta?.poll_id}` }, 'Votar'), meta);
         break;

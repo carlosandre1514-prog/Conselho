@@ -2,7 +2,7 @@
   "appId": "app.conselho.amigos",
   "appName": "Conselho",
   "webDir": "www",
-  "backgroundColor": "#11100D",
+  "backgroundColor": "#121514",
   "android": {
     "allowMixedContent": false,
     "captureInput": true,

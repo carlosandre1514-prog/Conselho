@@ -95,9 +95,9 @@ export default async function Figurinhas(root) {
         h('h2', { class: 'display' }, 'Faz uma nova'),
         h('p', { class: 'small', style: { margin: 0, color: '#BDB3A0', lineHeight: 1.5 } }, 'Aquela foto que todo mundo zoa, um vídeo de 3 segundos, um GIF. Recorta, escreve e manda.'),
         h('div', { class: 'sources' },
-          h('button', { type: 'button', onClick: () => choose('image') }, h('span', { style: { color: 'var(--gold)' } }, icon('image', 22)), 'Galeria'),
-          h('button', { type: 'button', onClick: () => choose('camera') }, h('span', { style: { color: 'var(--gold)' } }, icon('camera', 22)), 'Câmera'),
-          h('button', { type: 'button', onClick: () => choose('video') }, h('span', { style: { color: 'var(--gold)' } }, icon('film', 22)), 'Vídeo / GIF'))),
+          h('button', { type: 'button', onClick: () => choose('image') }, h('span', { style: { color: 'var(--tx-2)' } }, icon('image', 24, 1.6)), 'Galeria'),
+          h('button', { type: 'button', onClick: () => choose('camera') }, h('span', { style: { color: 'var(--tx-2)' } }, icon('camera', 24, 1.6)), 'Câmera'),
+          h('button', { type: 'button', onClick: () => choose('video') }, h('span', { style: { color: 'var(--tx-2)' } }, icon('film', 24, 1.6)), 'Vídeo / GIF'))),
       packs)));
   await load();
   return { destroy: () => sb.removeChannel(rt) };

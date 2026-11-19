@@ -12,7 +12,7 @@ export const STATUS = {
 export const DECIDED = ['aprovada', 'rejeitada', 'encerrada'];
 export const statusPill = (s) => {
   const [t, c] = STATUS[s] || STATUS.discussao;
-  return h('span', { class: `pill ${c}` }, s === 'votacao' ? h('span', { class: 'live-dot' }) : null, t);
+  return h('span', { class: `pill ${c}` }, t);
 };
 export const stamp = (s, big = false) => {
   if (!DECIDED.includes(s)) return null;

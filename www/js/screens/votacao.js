@@ -72,7 +72,7 @@ export function PollCard(pollId) {
     el.replaceChildren(...[
       h('div', { class: 'row between' },
         h('span', { class: 'kicker', style: { color: closed ? 'var(--mu)' : 'var(--gold)' } }, closed ? 'Resultado' : 'Votação aberta'),
-        h('span', { class: 'pill mu' }, icon(poll.anonymous ? 'lock' : 'eye', 12, 2), poll.anonymous ? 'Secreta' : 'Aberta')),
+        h('span', { class: 'pill mu plain' }, icon(poll.anonymous ? 'lock' : 'eye', 13, 2), poll.anonymous ? 'Voto secreto' : 'Voto aberto')),
       h('span', { class: 'q' }, poll.question),
       winners.length ? h('div', { class: 'result-banner' },
         h('span', { style: { color: 'var(--grn)' } }, icon('check', 22, 2.6)),

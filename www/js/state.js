@@ -22,7 +22,7 @@ export const on = (name, fn) => {
 
 const SETTINGS_KEY = 'conselho-settings';
 function loadSettings() {
-  const def = { bgType: 'color', bgColor: '#11100D', bgImage: null, bubbleAlpha: 1, bgDim: 0.25 };
+  const def = { bgType: 'color', bgColor: '#121514', bgImage: null, bubbleAlpha: 1, bgDim: 0.25 };
   try { return { ...def, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') }; } catch { return def; }
 }
 export function saveSettings(patch) {
@@ -49,7 +49,7 @@ export function chatBgStyle(el) {
     el.style.backgroundColor = '#000';
   } else {
     el.style.backgroundImage = '';
-    el.style.backgroundColor = s.bgColor || '#11100D';
+    el.style.backgroundColor = s.bgColor || '#121514';
   }
 }
 

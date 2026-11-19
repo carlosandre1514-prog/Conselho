@@ -27,7 +27,7 @@ export default async function Membros(root) {
         h('span', { class: 'grow' },
           h('span', { class: 'row', style: { gap: '6px' } },
             h('b', { style: { fontSize: '15px' } }, m.name + (m.id === state.me.id ? ' (você)' : '')),
-            m.role === 'admin' ? h('span', { class: 'pill gold', style: { padding: '2px 7px', fontSize: '10px' } }, icon('crown', 11, 2.2), 'Presidência') : null),
+            m.role === 'admin' ? h('span', { class: 'pill gold plain', style: { fontSize: '12px' } }, icon('crown', 12, 2), 'presidência') : null),
           h('span', { class: 'small', style: { color: online ? 'var(--grn)' : 'var(--mu)', display: 'block' } },
             online ? 'aqui agora' : m.last_seen ? `@${m.username} · visto ${timeAgo(m.last_seen)}` : `@${m.username}`)));
     }));
@@ -53,7 +53,7 @@ export default async function Membros(root) {
       h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Meu perfil', onClick: () => go('#perfil') }, avatar(state.me, 36))),
     h('div', { class: 'scroll' }, h('div', { class: 'pad' },
       h('section', { class: 'panel brass invite' },
-        h('span', { class: 'kicker', style: { color: 'var(--gold)' } }, 'Código de acesso'),
+        h('span', { class: 'kicker' }, 'Código de acesso'),
         h('div', { class: 'row between' }, codeEl,
           h('span', { class: 'row', style: { gap: '4px' } },
             iconBtn('copy', 'Copiar código', async () => { await navigator.clipboard?.writeText(code); buzz(8); toast('Código copiado'); }),

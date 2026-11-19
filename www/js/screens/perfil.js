@@ -7,7 +7,7 @@ import { back } from '../nav.js';
 import { logout, lockNow, loadMembers } from '../app.js';
 import { APP_VERSION } from '../config.js';
 
-const BG_COLORS = ['#11100D', '#16222B', '#18261C', '#2A1A20', '#2B2417'];
+const BG_COLORS = ['#121514', '#141B24', '#1A1620', '#21160F', '#0E1A17'];
 const NAME_COLORS = ['#D9AE55', '#6FA8DC', '#5BBF86', '#E58BB8', '#E0675A', '#B39DDB', '#4DD0E1', '#FFB74D'];
 
 export default async function Perfil(root) {
