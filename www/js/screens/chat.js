@@ -58,7 +58,7 @@ export default async function Chat(root) {
 
   const header = h('header', { class: 'topbar bordered' },
     h('span', { style: { width: '6px' } }),
-    logo(34),
+    logo(40),
     h('div', { class: 'title grow' }, h('b', null, state.group?.name || 'Conselho'), sub),
     iconBtn('phone', 'Ligação do grupo', () => call.openChoice()),
     h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Perfil e aparência', onClick: () => go('#perfil') }, avatar(state.me, 34)));

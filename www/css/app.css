@@ -472,3 +472,5 @@ input[type=range] { width: 100%; accent-color: var(--gold); }
 /* teclado aberto: some o menu de baixo e o campo desce pro lugar dele */
 #app.kb-open .tabbar { display: none; }
 #app.kb-open .bottom-input { padding-bottom: 8px; }
+.logo-img { border-radius: 50%; overflow: hidden; box-shadow: 0 0 18px rgba(240,170,60,.28); flex-shrink: 0; }
+.logo-img img { width: 100%; height: 100%; display: block; }
