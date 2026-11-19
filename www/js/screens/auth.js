@@ -26,10 +26,15 @@ function passwordInput(attrs) {
 const steps = (n) => h('div', { class: 'steps' }, [1, 2, 3].map((i) => h('i', { class: i <= n ? 'on' : '' })), h('span', null, `Passo ${n} de 3`));
 
 // Tela de entrada: primeiro acesso (código) ou "já tenho conta".
+const LAST_KEY = 'conselho-last-user';
+export const rememberUser = (username, name) => { try { localStorage.setItem(LAST_KEY, JSON.stringify({ username, name })); } catch { /* ok */ } };
+const lastUser = () => { try { return JSON.parse(localStorage.getItem(LAST_KEY) || 'null'); } catch { return null; } };
+
 export function renderAuth(root, onDone) {
-  let mode = 'novo';
+  const last = lastUser();
+  let mode = last?.username ? 'login' : 'novo';
   let step = 1;
-  const data = { code: '', group: '', name: '', username: '' };
+  const data = { code: '', group: '', name: '', username: '', sameNameOk: false };
 
   const draw = () => {
     const err = h('p', { class: 'err', role: 'alert' });
@@ -37,8 +42,8 @@ export function renderAuth(root, onDone) {
     let heading;
 
     if (mode === 'login') {
-      heading = ['De volta.', 'Entra com seu usuário e a senha que você criou.'];
-      const user = h('input', { class: 'input', autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', placeholder: 'seu usuário', required: true });
+      heading = [last?.name ? `De volta, ${last.name.split(' ')[0]}.` : 'De volta.', 'Entra com seu usuário e a senha que você já criou. Não precisa do código de novo.'];
+      const user = h('input', { class: 'input', autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', placeholder: 'seu usuário', value: data.loginUser || last?.username || '', required: true });
       const pass = passwordInput({ autocomplete: 'current-password', placeholder: 'sua senha', required: true });
       const btn = h('button', { class: 'btn primary block', type: 'submit' }, 'Entrar');
       form = h('form', null, field('Usuário', user), field('Senha', pass.el), err, btn);
@@ -49,6 +54,7 @@ export function renderAuth(root, onDone) {
         const { data: res, error } = await sb.auth.signInWithPassword({ email: usernameToEmail(user.value), password: pass.input.value });
         if (error) { busy(btn, false); err.textContent = errMsg(error); buzz([30, 50, 30]); return; }
         await savePassword(pass.input.value, res.user.id);
+        rememberUser(user.value.trim().toLowerCase(), res.user.user_metadata?.name);
         onDone();
       });
     } else if (step === 1) {
@@ -80,11 +86,23 @@ export function renderAuth(root, onDone) {
       const btn = h('button', { class: 'btn primary block', type: 'submit' }, 'Continuar');
       form = h('form', null, steps(2), field('Seu nome', name), field('Usuário', user, 'É com ele que você entra em outro celular.'), err, btn,
         h('button', { type: 'button', class: 'btn line block', onClick: () => { step = 1; draw(); } }, 'Voltar'));
-      form.addEventListener('submit', (e) => {
+      form.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!/^[a-z0-9_.]{3,20}$/.test(user.value)) { err.textContent = 'Usuário: de 3 a 20 letras minúsculas, números, ponto ou _.'; return; }
         data.name = name.value.trim();
         data.username = user.value;
+        if (!data.sameNameOk) {
+          const { data: existing } = await sb.rpc('name_in_group', { p_code: data.code, p_name: data.name });
+          if (existing) {
+            buzz([30, 50, 30]);
+            err.replaceChildren(
+              h('span', { style: { display: 'block', color: 'var(--tx)', marginBottom: '10px', lineHeight: 1.5 } },
+                `Já tem um "${data.name}" no grupo (@${existing}). Se for você, não crie outra conta: entre com seu usuário e senha.`),
+              h('button', { type: 'button', class: 'btn primary block', onClick: () => { data.loginUser = existing; mode = 'login'; draw(); } }, `Sou eu, entrar como @${existing}`),
+              h('button', { type: 'button', class: 'btn line block', style: { marginTop: '8px' }, onClick: () => { data.sameNameOk = true; step = 3; draw(); } }, 'É outra pessoa com o mesmo nome'));
+            return;
+          }
+        }
         step = 3; draw();
       });
     } else {
@@ -111,6 +129,7 @@ export function renderAuth(root, onDone) {
           const { data: s, error } = await sb.auth.signInWithPassword({ email: usernameToEmail(data.username), password: p1.input.value });
           if (error) throw error;
           await savePassword(p1.input.value, s.user.id);
+          rememberUser(data.username, data.name);
           buzz(30);
           onDone();
         } catch (ex) {
@@ -124,6 +143,7 @@ export function renderAuth(root, onDone) {
     const switcher = mode === 'login'
       ? h('p', { class: 'switch' }, 'Primeira vez aqui? ', h('button', { type: 'button', onClick: () => { mode = 'novo'; step = 1; draw(); } }, 'Tenho um código'))
       : step === 1 ? h('p', { class: 'switch' }, 'Já tem conta? ', h('button', { type: 'button', onClick: () => { mode = 'login'; draw(); } }, 'Entrar com usuário e senha')) : h('span');
+    if (mode === 'login' && last?.username) switcher.prepend(h('span', { style: { display: 'block', marginBottom: '4px' } }, 'Não é você?'));
 
     root.replaceChildren(h('main', { class: 'auth' },
       h('div', null, logo(56),
@@ -179,7 +199,7 @@ export function showLock({ userId, username, name, onUnlock, onLogout }) {
       hideLock();
       clearPassword();
       await onLogout?.();
-    } }, 'Não é você? Sair desta conta'),
+    } }, 'Trocar de conta'),
   );
   document.body.append(lockEl);
   setTimeout(() => pass.input.focus(), 60);

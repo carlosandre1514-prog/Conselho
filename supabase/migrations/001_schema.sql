@@ -292,3 +292,7 @@ alter publication supabase_realtime add table public.message_reactions;
 -- groups ganhou chat_bg_type ('tema'|'color'|'image'), chat_bg_value, chat_bg_dim, chat_bg_by, chat_bg_at
 -- funções set_chat_bg(p_type, p_value, p_dim) e delete_pauta(p_id) (só quem propôs ou admin)
 -- groups entrou no supabase_realtime
+
+-- ---------- v0.6: código exclusivo da presidência, aviso de nome repetido, remover membro ----------
+-- tabela group_secrets (admin_code, uso único, sem acesso pelo app); check_code e name_in_group aceitam os dois códigos
+-- remove_member(p_user) só para admin; a Edge Function "entrar" só dá presidência com o código exclusivo

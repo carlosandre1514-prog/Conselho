@@ -41,9 +41,15 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: group, error: gErr } = await admin
+  // código de convite (membro) ou código exclusivo da presidência (uso único)
+  let isAdminCode = false;
+  let { data: group, error: gErr } = await admin
     .from("groups").select("id").eq("invite_code", code).maybeSingle();
   if (gErr) return json({ error: "Erro ao conferir o código." }, 500);
+  if (!group) {
+    const { data: sec } = await admin.from("group_secrets").select("group_id").eq("admin_code", code).maybeSingle();
+    if (sec) { group = { id: sec.group_id }; isAdminCode = true; }
+  }
   if (!group) return json({ error: "Código de acesso inválido." }, 403);
 
   const { data: taken } = await admin.from("profiles").select("id").eq("username", username).maybeSingle();
@@ -61,8 +67,7 @@ Deno.serve(async (req) => {
     return json({ error: msg }, 400);
   }
 
-  const { count } = await admin.from("profiles").select("id", { count: "exact", head: true }).eq("group_id", group.id);
-  const role = (count ?? 0) === 0 ? "admin" : "membro";
+  const role = isAdminCode ? "admin" : "membro";
   const color = COLORS[Math.floor(Math.random() * COLORS.length)];
 
   const { error: pErr } = await admin.from("profiles").insert({
@@ -72,6 +77,8 @@ Deno.serve(async (req) => {
     await admin.auth.admin.deleteUser(created.user.id);
     return json({ error: "Não deu pra criar o perfil." }, 500);
   }
+
+  if (isAdminCode) await admin.from("group_secrets").update({ admin_code: null }).eq("group_id", group.id);
 
   await admin.from("messages").insert({
     group_id: group.id, user_id: created.user.id, kind: "system", body: `${name} entrou no Conselho`,

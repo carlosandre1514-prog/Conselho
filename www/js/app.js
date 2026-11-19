@@ -2,7 +2,7 @@ import { sb } from './sb.js';
 import { state, emit, applySettings } from './state.js';
 import { h, icon, logo, toast, errMsg } from './ui.js';
 import { LOCK_AFTER_MS } from './config.js';
-import { renderAuth, showLock, isLocked } from './screens/auth.js';
+import { renderAuth, showLock, isLocked, rememberUser } from './screens/auth.js';
 import { clearPassword } from './lock.js';
 import * as call from './call.js';
 
@@ -146,6 +146,7 @@ async function startApp() {
     return;
   }
   state.me = me;
+  rememberUser(me.username, me.name);
   const { data: group } = await sb.from('groups').select('id,name,chat_bg_type,chat_bg_value,chat_bg_dim,chat_bg_by').eq('id', me.group_id).single();
   state.group = group;
   applySettings();

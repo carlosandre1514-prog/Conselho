@@ -1,6 +1,7 @@
 import { sb } from '../sb.js';
 import { state, on } from '../state.js';
-import { h, icon, iconBtn, avatar, timeAgo, toast, confirmBox, errMsg, buzz } from '../ui.js';
+import { h, icon, iconBtn, avatar, timeAgo, toast, sheet, confirmBox, errMsg, buzz } from '../ui.js';
+import { loadMembers } from '../app.js';
 import { go } from '../nav.js';
 
 export default async function Membros(root) {
@@ -22,7 +23,8 @@ export default async function Membros(root) {
     sub.textContent = `${members.length} ${members.length === 1 ? 'cadeira ocupada' : 'cadeiras ocupadas'} · ${state.online.size} aqui agora`;
     list.replaceChildren(...members.map((m) => {
       const online = state.online.has(m.id);
-      return h('li', { class: 'member' },
+      const canRemove = isAdmin && m.id !== state.me.id;
+      return h('li', { class: 'member', style: canRemove ? { cursor: 'pointer' } : null, onClick: canRemove ? () => manage(m) : null },
         h('span', { class: 'av-wrap' }, avatar(m, 42), online ? h('span', { class: 'on', role: 'img', 'aria-label': 'online' }) : null),
         h('span', { class: 'grow' },
           h('span', { class: 'row', style: { gap: '6px' } },
@@ -31,6 +33,20 @@ export default async function Membros(root) {
           h('span', { class: 'small', style: { color: online ? 'var(--grn)' : 'var(--mu)', display: 'block' } },
             online ? 'aqui agora' : m.last_seen ? `@${m.username} · visto ${timeAgo(m.last_seen)}` : `@${m.username}`)));
     }));
+  }
+
+  function manage(m) {
+    const close = sheet(
+      h('div', { class: 'row', style: { gap: '12px', padding: '4px' } }, avatar(m, 44), h('div', null, h('b', { style: { fontSize: '17px' } }, m.name), h('div', { class: 'small muted' }, `@${m.username}`))),
+      h('button', { class: 'sheet-item danger', onClick: async () => {
+        close();
+        if (!(await confirmBox(`Remover ${m.name} do Conselho? A conta é apagada; as mensagens ficam.`, 'Remover', true))) return;
+        const { error } = await sb.rpc('remove_member', { p_user: m.id });
+        if (error) return toast(errMsg(error));
+        buzz([20, 40, 20]);
+        toast(`${m.name} foi removido`);
+        loadMembers().catch(() => {});
+      } }, icon('trash', 20), 'Remover do Conselho'));
   }
 
   async function loadCode() {
