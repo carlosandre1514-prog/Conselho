@@ -22,8 +22,12 @@ export const on = (name, fn) => {
 
 const SETTINGS_KEY = 'conselho-settings';
 function loadSettings() {
-  const def = { bgType: 'color', bgColor: '#121514', bgImage: null, bubbleAlpha: 1, bgDim: 0.25 };
-  try { return { ...def, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') }; } catch { return def; }
+  const def = { v: 3, bgType: 'tema', bgColor: '#0A0603', bgImage: null, bubbleAlpha: 0.92, bgDim: 0.45 };
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    if (saved.v !== 3) return { ...def, bgImage: saved.bgImage || null, bgType: saved.bgType === 'image' && saved.bgImage ? 'image' : 'tema' };
+    return { ...def, ...saved };
+  } catch { return def; }
 }
 export function saveSettings(patch) {
   Object.assign(state.settings, patch);
@@ -40,11 +44,14 @@ export function saveSettings(patch) {
 export function applySettings() {
   const r = document.documentElement.style;
   r.setProperty('--bubble-alpha', String(state.settings.bubbleAlpha));
-  r.setProperty('--bg-dim', String(state.settings.bgType === 'image' ? state.settings.bgDim : 0));
+  r.setProperty('--bg-dim', String(state.settings.bgType === 'color' ? 0 : state.settings.bgDim));
 }
 export function chatBgStyle(el) {
   const s = state.settings;
-  if (s.bgType === 'image' && s.bgImage) {
+  if (s.bgType === 'tema' || (s.bgType === 'image' && !s.bgImage)) {
+    el.style.backgroundImage = 'url("img/fundo.jpg")';
+    el.style.backgroundColor = '#0A0603';
+  } else if (s.bgType === 'image' && s.bgImage) {
     el.style.backgroundImage = `url("${s.bgImage}")`;
     el.style.backgroundColor = '#000';
   } else {

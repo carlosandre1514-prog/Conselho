@@ -7,7 +7,7 @@ import { back } from '../nav.js';
 import { logout, lockNow, loadMembers } from '../app.js';
 import { APP_VERSION } from '../config.js';
 
-const BG_COLORS = ['#121514', '#141B24', '#1A1620', '#21160F', '#0E1A17'];
+const BG_COLORS = ['#0A0603', '#1A0F05', '#141B24', '#1A1620'];
 const NAME_COLORS = ['#D9AE55', '#6FA8DC', '#5BBF86', '#E58BB8', '#E0675A', '#B39DDB', '#4DD0E1', '#FFB74D'];
 
 export default async function Perfil(root) {
@@ -57,6 +57,8 @@ export default async function Perfil(root) {
   const drawPresets = () => {
     const s = state.settings;
     presets.replaceChildren(
+      h('button', { type: 'button', class: `bg-preset ${s.bgType === 'tema' ? 'on' : ''}`, style: { backgroundImage: 'url("img/fundo-thumb.jpg")' }, 'aria-label': 'Fundo do Conselho',
+        onClick: () => { saveSettings({ bgType: 'tema' }); drawPresets(); drawPreview(); } }),
       ...BG_COLORS.map((c) => h('button', { type: 'button', class: `bg-preset ${s.bgType === 'color' && s.bgColor === c ? 'on' : ''}`, style: { background: c }, 'aria-label': 'Fundo de cor',
         onClick: () => { saveSettings({ bgType: 'color', bgColor: c }); drawPresets(); drawPreview(); } })));
   };
@@ -124,7 +126,7 @@ export default async function Perfil(root) {
       presets,
       h('div', { class: 'row' },
         h('button', { class: 'btn sm line grow', onClick: pickBg }, icon('image', 16), 'Usar uma foto'),
-        h('button', { class: 'btn sm line', onClick: () => { saveSettings({ bgType: 'color', bgImage: null }); drawPresets(); drawPreview(); } }, 'Sem foto')),
+        h('button', { class: 'btn sm line', onClick: () => { saveSettings({ bgType: 'tema', bgImage: null }); drawPresets(); drawPreview(); } }, 'Fundo padrão')),
       range('Bolhas', 0.3, 1, 0.05, state.settings.bubbleAlpha, (v) => { saveSettings({ bubbleAlpha: v }); }, (v) => Math.round(v * 100) + '%'),
       range('Escurecer', 0, 0.7, 0.05, state.settings.bgDim, (v) => { saveSettings({ bgDim: v }); }, (v) => Math.round(v * 100) + '%'),
       h('p', { class: 'small muted', style: { margin: 0 } }, '"Bolhas" deixa os balões mais transparentes pra aparecer o fundo. "Escurecer" ajuda a ler em cima de foto clara. Vale só neste celular.'),
