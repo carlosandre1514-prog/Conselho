@@ -287,3 +287,8 @@ create policy "trocar reacao" on public.message_reactions for update to authenti
 create policy "tirar reacao" on public.message_reactions for delete to authenticated using (user_id = auth.uid());
 alter publication supabase_realtime add table public.message_reactions;
 -- poll_results passou a devolver também voter_ids (uuid[])
+
+-- ---------- v0.5: fundo da conversa do grupo e apagar pauta ----------
+-- groups ganhou chat_bg_type ('tema'|'color'|'image'), chat_bg_value, chat_bg_dim, chat_bg_by, chat_bg_at
+-- funções set_chat_bg(p_type, p_value, p_dim) e delete_pauta(p_id) (só quem propôs ou admin)
+-- groups entrou no supabase_realtime

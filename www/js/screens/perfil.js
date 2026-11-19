@@ -1,7 +1,7 @@
 import { sb, usernameToEmail } from '../sb.js';
-import { state, saveSettings, chatBgStyle } from '../state.js';
+import { state, on, saveSettings, chatBgStyle, memberName } from '../state.js';
 import { h, icon, iconBtn, avatar, toast, sheet, pickFile, errMsg } from '../ui.js';
-import { uploadFile, compressImage, imageToDataUrl } from '../media.js';
+import { uploadFile, compressImage } from '../media.js';
 import { savePassword } from '../lock.js';
 import { back } from '../nav.js';
 import { logout, lockNow, loadMembers } from '../app.js';
@@ -54,24 +54,36 @@ export default async function Perfil(root) {
       h('div', { class: 'msg mine first' }, h('div', { class: 'bubble' }, h('span', { class: 'txt' }, 'Né? 😎'))));
   };
   const presets = h('div', { class: 'bg-presets' });
+  const whoChanged = h('p', { class: 'small muted', style: { margin: 0 } });
+  const setBg = async (type, value, dim) => {
+    const g = state.group;
+    const { error } = await sb.rpc('set_chat_bg', { p_type: type, p_value: value ?? null, p_dim: dim ?? g.chat_bg_dim });
+    if (error) { toast(errMsg(error)); return false; }
+    state.group = { ...g, chat_bg_type: type, chat_bg_value: type === 'tema' ? null : value, chat_bg_dim: dim ?? g.chat_bg_dim, chat_bg_by: state.me.id };
+    drawPresets(); drawPreview();
+    return true;
+  };
   const drawPresets = () => {
-    const s = state.settings;
+    const g = state.group || {};
     presets.replaceChildren(
-      h('button', { type: 'button', class: `bg-preset ${s.bgType === 'tema' ? 'on' : ''}`, style: { backgroundImage: 'url("img/fundo-thumb.jpg")' }, 'aria-label': 'Fundo do Conselho',
-        onClick: () => { saveSettings({ bgType: 'tema' }); drawPresets(); drawPreview(); } }),
-      ...BG_COLORS.map((c) => h('button', { type: 'button', class: `bg-preset ${s.bgType === 'color' && s.bgColor === c ? 'on' : ''}`, style: { background: c }, 'aria-label': 'Fundo de cor',
-        onClick: () => { saveSettings({ bgType: 'color', bgColor: c }); drawPresets(); drawPreview(); } })));
+      h('button', { type: 'button', class: `bg-preset ${!g.chat_bg_type || g.chat_bg_type === 'tema' ? 'on' : ''}`, style: { backgroundImage: 'url("img/fundo-thumb.jpg")' }, 'aria-label': 'Fundo do Conselho',
+        onClick: () => setBg('tema', null) }),
+      ...BG_COLORS.map((c) => h('button', { type: 'button', class: `bg-preset ${g.chat_bg_type === 'color' && g.chat_bg_value === c ? 'on' : ''}`, style: { background: c }, 'aria-label': 'Fundo de cor',
+        onClick: () => setBg('color', c) })));
+    whoChanged.textContent = g.chat_bg_by ? `Último a trocar: ${g.chat_bg_by === state.me.id ? 'você' : memberName(g.chat_bg_by)}.` : 'Ninguém trocou ainda.';
   };
   const pickBg = async () => {
     const file = await pickFile('image/*');
     if (!file) return;
     try {
-      const dataUrl = await imageToDataUrl(file, 1280, 0.78);
-      saveSettings({ bgType: 'image', bgImage: dataUrl });
-      drawPresets(); drawPreview();
-      toast('Fundo trocado');
+      toast('Enviando o fundo…');
+      const { blob } = await compressImage(file, 1440, 0.82);
+      const url = await uploadFile(blob, 'jpg');
+      if (await setBg('image', url)) toast('Fundo trocado pra todo mundo');
     } catch (e) { toast(errMsg(e)); }
   };
+  let dimTimer = null;
+  const offGroup = on('group', () => { drawPresets(); drawPreview(); });
   const range = (label, min, max, step, val, fn, fmt) => {
     const out = h('span', { style: { minWidth: '44px', textAlign: 'right', color: 'var(--gold)' } }, fmt(val));
     const r = h('input', { type: 'range', min, max, step, value: String(val), 'aria-label': label });
@@ -121,15 +133,20 @@ export default async function Perfil(root) {
       h('div', { class: 'field' }, h('span', { class: 'label' }, 'Cor do seu nome no chat'), colorRow),
       saveBtn,
 
-      h('div', { class: 'rule left' }, h('span', { class: 'kicker' }, 'Fundo da conversa')),
+      h('div', { class: 'rule left' }, h('span', { class: 'kicker' }, 'Fundo da conversa · vale pra todo mundo')),
       preview,
       presets,
       h('div', { class: 'row' },
         h('button', { class: 'btn sm line grow', onClick: pickBg }, icon('image', 16), 'Usar uma foto'),
-        h('button', { class: 'btn sm line', onClick: () => { saveSettings({ bgType: 'tema', bgImage: null }); drawPresets(); drawPreview(); } }, 'Fundo padrão')),
+        h('button', { class: 'btn sm line', onClick: () => setBg('tema', null) }, 'Fundo padrão')),
+      whoChanged,
       range('Bolhas', 0.3, 1, 0.05, state.settings.bubbleAlpha, (v) => { saveSettings({ bubbleAlpha: v }); }, (v) => Math.round(v * 100) + '%'),
-      range('Escurecer', 0, 0.7, 0.05, state.settings.bgDim, (v) => { saveSettings({ bgDim: v }); }, (v) => Math.round(v * 100) + '%'),
-      h('p', { class: 'small muted', style: { margin: 0 } }, '"Bolhas" deixa os balões mais transparentes pra aparecer o fundo. "Escurecer" ajuda a ler em cima de foto clara. Vale só neste celular.'),
+      range('Escurecer', 0, 0.8, 0.05, state.group?.chat_bg_dim ?? 0.45, (v) => {
+        document.documentElement.style.setProperty('--bg-dim', String(v));
+        clearTimeout(dimTimer);
+        dimTimer = setTimeout(() => { const g = state.group; setBg(g.chat_bg_type || 'tema', g.chat_bg_value, v); }, 500);
+      }, (v) => Math.round(v * 100) + '%'),
+      h('p', { class: 'small muted', style: { margin: 0 } }, 'O fundo e o "Escurecer" mudam pra todo o grupo e ficam até alguém trocar de novo. "Bolhas" (transparência dos balões) vale só no seu celular.'),
 
       h('div', { class: 'rule left' }, h('span', { class: 'kicker' }, 'Segurança')),
       h('div', { class: 'settings-list' },
@@ -139,4 +156,5 @@ export default async function Perfil(root) {
       h('p', { class: 'small muted', style: { textAlign: 'center', margin: '8px 0 0' } }, `Conselho v${APP_VERSION}`))));
   drawPresets();
   drawPreview();
+  return { destroy: () => { offGroup(); clearTimeout(dimTimer); } };
 }

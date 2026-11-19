@@ -44,19 +44,21 @@ export function saveSettings(patch) {
 export function applySettings() {
   const r = document.documentElement.style;
   r.setProperty('--bubble-alpha', String(state.settings.bubbleAlpha));
-  r.setProperty('--bg-dim', String(state.settings.bgType === 'color' ? 0 : state.settings.bgDim));
+  const g = state.group;
+  r.setProperty('--bg-dim', String(!g || g.chat_bg_type === 'color' ? 0 : (g.chat_bg_dim ?? 0.45)));
 }
+// Fundo da conversa: é do grupo (vale pra todo mundo) e fica salvo no banco.
 export function chatBgStyle(el) {
-  const s = state.settings;
-  if (s.bgType === 'tema' || (s.bgType === 'image' && !s.bgImage)) {
+  const g = state.group || {};
+  if (g.chat_bg_type === 'image' && g.chat_bg_value) {
+    el.style.backgroundImage = `url("${g.chat_bg_value}")`;
+    el.style.backgroundColor = '#000';
+  } else if (g.chat_bg_type === 'color' && g.chat_bg_value) {
+    el.style.backgroundImage = '';
+    el.style.backgroundColor = g.chat_bg_value;
+  } else {
     el.style.backgroundImage = 'url("img/fundo.jpg")';
     el.style.backgroundColor = '#0A0603';
-  } else if (s.bgType === 'image' && s.bgImage) {
-    el.style.backgroundImage = `url("${s.bgImage}")`;
-    el.style.backgroundColor = '#000';
-  } else {
-    el.style.backgroundImage = '';
-    el.style.backgroundColor = s.bgColor || '#121514';
   }
 }
 

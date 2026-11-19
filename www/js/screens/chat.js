@@ -80,6 +80,7 @@ export default async function Chat(root) {
   // ---------- lista ----------
   const bg = h('div', { class: 'chat-bg' });
   chatBgStyle(bg);
+  offs.push(on('group', () => chatBgStyle(bg)));
   const list = h('div', { class: 'msgs', role: 'log', 'aria-live': 'polite' });
   const loadMoreBtn = h('button', { class: 'btn sm line load-more', onClick: () => loadOlder() }, 'Mensagens anteriores');
   const toBottomBtn = h('button', { type: 'button', class: 'to-bottom', 'aria-label': 'Ir para o fim', style: { display: 'none' }, onClick: () => { toBottom(true); } }, icon('arrowDown', 20, 2));

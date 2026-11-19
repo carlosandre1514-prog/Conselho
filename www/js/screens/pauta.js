@@ -1,6 +1,6 @@
 import { sb } from '../sb.js';
 import { state } from '../state.js';
-import { h, icon, iconBtn, avatar, timeAgo, toast, sheet, errMsg, buzz, skeleton } from '../ui.js';
+import { h, icon, iconBtn, avatar, timeAgo, toast, sheet, confirmBox, errMsg, buzz, skeleton } from '../ui.js';
 import { back } from '../nav.js';
 import { statusPill, stamp, DECIDED, STATUS } from './conselho.js';
 import { PollCard } from './votacao.js';
@@ -100,7 +100,16 @@ export async function PautaScreen(root, route) {
       h('button', { class: 'sheet-item', onClick: () => set('aprovada', 'Carimbado: aprovada') }, h('span', { style: { color: 'var(--grn)' } }, icon('check', 20, 2.4)), 'Aprovar'),
       h('button', { class: 'sheet-item', onClick: () => set('rejeitada', 'Carimbado: rejeitada') }, h('span', { style: { color: 'var(--red)' } }, icon('x', 20, 2.4)), 'Rejeitar'),
       h('button', { class: 'sheet-item', onClick: () => set('encerrada', 'Pauta arquivada') }, icon('lock', 20), 'Arquivar sem decidir'),
-      pauta && DECIDED.includes(pauta.status) ? h('button', { class: 'sheet-item', onClick: () => set('discussao', 'Pauta reaberta') }, icon('refresh', 20), 'Reabrir a discussão') : null);
+      pauta && DECIDED.includes(pauta.status) ? h('button', { class: 'sheet-item', onClick: () => set('discussao', 'Pauta reaberta') }, icon('refresh', 20), 'Reabrir a discussão') : null,
+      h('button', { class: 'sheet-item danger', onClick: async () => {
+        close();
+        if (!(await confirmBox(`Apagar a pauta "${pauta?.title || ''}"? Some a discussão e as votações dela, pra todo mundo.`, 'Apagar pauta', true))) return;
+        const { error } = await sb.rpc('delete_pauta', { p_id: id });
+        if (error) return toast(errMsg(error));
+        buzz([20, 40, 20]);
+        toast('Pauta apagada');
+        location.replace('#conselho');
+      } }, icon('trash', 20), 'Apagar pauta'));
   }
 
   const input = h('input', { type: 'text', placeholder: 'Pedir a palavra…', 'aria-label': 'Comentar na pauta', maxlength: '2000' });
@@ -121,6 +130,7 @@ export async function PautaScreen(root, route) {
   const rt = sb.channel(`pauta-${id}-${Date.now()}`)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pauta_comments', filter: `pauta_id=eq.${id}` }, (p) => addComment(p.new))
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pautas', filter: `id=eq.${id}` }, () => loadPauta())
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'pautas' }, (p) => { if (p.old?.id === id) { toast('Essa pauta foi apagada.'); location.replace('#conselho'); } })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'polls', filter: `pauta_id=eq.${id}` }, () => loadPolls())
     .subscribe();
 

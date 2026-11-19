@@ -125,6 +125,12 @@ function startPresence() {
     });
   profilesCh = sb.channel('profiles-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `group_id=eq.${state.group.id}` }, () => loadMembers().catch(() => {}))
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'groups', filter: `id=eq.${state.group.id}` }, (p) => {
+      const { id, name, chat_bg_type, chat_bg_value, chat_bg_dim, chat_bg_by } = p.new;
+      state.group = { ...state.group, id, name, chat_bg_type, chat_bg_value, chat_bg_dim, chat_bg_by };
+      applySettings();
+      emit('group');
+    })
     .subscribe();
 }
 
@@ -140,8 +146,9 @@ async function startApp() {
     return;
   }
   state.me = me;
-  const { data: group } = await sb.from('groups').select('id,name').eq('id', me.group_id).single();
+  const { data: group } = await sb.from('groups').select('id,name,chat_bg_type,chat_bg_value,chat_bg_dim,chat_bg_by').eq('id', me.group_id).single();
   state.group = group;
+  applySettings();
   await loadMembers();
   sb.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', me.id).then(() => {});
   startPresence();
