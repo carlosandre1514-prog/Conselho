@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Conselho — app de mensagens do grupo de amigos, com pautas, votações, figurinhas e ligação em grupo.",
   "scripts": {
-    "vendor": "esbuild node_modules/@supabase/supabase-js/dist/module/index.js --bundle --format=esm --minify --outfile=www/vendor/supabase.js",
+    "vendor": "esbuild build/vendor-entry.js --bundle --format=esm --platform=browser --minify --outfile=www/vendor/supabase.js",
     "serve": "npx serve www"
   }
 }
