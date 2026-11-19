@@ -4,6 +4,10 @@ import { sb } from './sb.js';
 import { state, emit, memberName } from './state.js';
 import { h, icon, avatar, toast, sheet, buzz, fmtDur } from './ui.js';
 import { ICE_SERVERS } from './config.js';
+import { startRing, stopRing, unlockAudio } from './ring.js';
+
+unlockAudio();
+let outTimeout = null;
 
 let ch = null;
 let subscribed = false;
@@ -55,6 +59,7 @@ function onSync() {
     renderTiles();
   }
   const info = callInfo();
+  if (joined && info.ids.some((id) => id !== state.me.id)) { stopRing('out'); clearTimeout(outTimeout); }
   if (!wasActive && info.active && !joined && info.ids.some((id) => id !== state.me.id)) showIncoming();
   if (!info.active || joined) hideIncoming();
   wasActive = info.active;
@@ -73,9 +78,10 @@ function showIncoming() {
     h('button', { type: 'button', class: 'icon-btn filled round', 'aria-label': 'Agora não', onClick: hideIncoming }, icon('x', 18)),
     h('button', { type: 'button', class: 'icon-btn round', style: { background: 'var(--grn)', color: '#082214' }, 'aria-label': 'Entrar na ligação', onClick: () => { hideIncoming(); openChoice(); } }, icon('phone', 18, 2.2)));
   document.body.append(incomingEl);
-  setTimeout(hideIncoming, 25000);
+  startRing('in');
+  setTimeout(hideIncoming, 45000);
 }
-function hideIncoming() { incomingEl?.remove(); incomingEl = null; }
+function hideIncoming() { incomingEl?.remove(); incomingEl = null; stopRing('in'); }
 
 // ---------- quem está falando ----------
 function meter(id, stream) {
@@ -141,6 +147,15 @@ async function flush(peer) {
   for (const c of list) await peer.pc.addIceCandidate(c).catch(() => {});
 }
 
+async function boostAudio(sender) {
+  try {
+    const p = sender.getParameters();
+    p.encodings = p.encodings?.length ? p.encodings : [{}];
+    p.encodings[0].maxBitrate = 96000;
+    await sender.setParameters(p);
+  } catch { /* nem todo aparelho deixa mudar */ }
+}
+
 async function connect(id) {
   const peer = makePeer(id);
   const { pc } = peer;
@@ -149,6 +164,7 @@ async function connect(id) {
   const vt = local?.getVideoTracks()[0];
   const v = pc.addTransceiver('video', { direction: vt ? 'sendrecv' : 'recvonly' });
   if (vt) await v.sender.replaceTrack(vt);
+  await boostAudio(a.sender);
   await pc.setLocalDescription(await pc.createOffer());
   send(id, { kind: 'offer', sdp: pc.localDescription.toJSON() });
 }
@@ -167,6 +183,7 @@ async function onSignal(p) {
       if (kind === 'audio') {
         await t.sender.replaceTrack(local?.getAudioTracks()[0] || null);
         t.direction = 'sendrecv';
+        await boostAudio(t.sender);
       } else if (kind === 'video') {
         const vt = local?.getVideoTracks()[0];
         if (vt) { await t.sender.replaceTrack(vt); t.direction = 'sendrecv'; } else t.direction = 'recvonly';
@@ -239,8 +256,14 @@ export async function join(m) {
   mic = true;
   cam = m === 'video';
   buzz(25);
+  hideIncoming();
   await publish();
   if (wasEmpty) {
+    startRing('out');
+    clearTimeout(outTimeout);
+    outTimeout = setTimeout(() => {
+      if (joined && ![...participants.keys()].some((id) => id !== state.me.id)) { stopRing('out'); toast('Ninguém atendeu ainda. Você continua na sala.'); }
+    }, 60000);
     sb.from('messages').insert({ kind: 'call', body: m === 'video' ? 'Chamada de vídeo' : 'Chamada de voz', meta: { mode: m } }).then(() => {});
   }
   openUi();
@@ -255,6 +278,8 @@ export async function leave() {
   local?.getTracks().forEach((t) => t.stop());
   local = null;
   stopMeters();
+  stopRing('out');
+  clearTimeout(outTimeout);
   clearInterval(clockTimer);
   buzz(15);
   try { await ch?.untrack(); } catch { /* ok */ }
@@ -346,7 +371,8 @@ function renderTiles() {
   const ids = [state.me.id, ...[...participants.keys()].filter((id) => id !== state.me.id)];
   const starts = [...participants.values()].map((p) => p.at).filter(Boolean);
   const since = starts.length ? Math.min(...starts) : Date.now();
-  subtitle.replaceChildren(h('span', { class: 'timer' }, fmtDur((Date.now() - since) / 1000)), ` · ${ids.length} ${ids.length === 1 ? 'pessoa' : 'pessoas'} · ${mode === 'video' ? 'vídeo' : 'voz'}`);
+  if (ids.length <= 1) subtitle.replaceChildren(h('span', { style: { color: 'var(--gold-2)' } }, 'Chamando o Conselho…'));
+  else subtitle.replaceChildren(h('span', { class: 'timer' }, fmtDur((Date.now() - since) / 1000)), ` · ${ids.length} pessoas · ${mode === 'video' ? 'vídeo' : 'voz'}`);
   grid.classList.toggle('one', ids.length <= 2);
   for (const id of [...tiles.keys()]) if (!ids.includes(id)) { tiles.get(id).el.remove(); tiles.delete(id); }
   for (const id of ids) {
